@@ -11,12 +11,12 @@ Provide actionable HR insights for real-world decision making
 The dataset includes 100,000 employee records with 20 HR and productivity-related attributes.
 
 📚 Libraries Used & Their Purpose
-1. pandas
+1. pandas:
 Data loading, cleaning, transformation Handling missing values and preparing dataset for modeling
-2. numpy
+2. numpy:
 Numerical operationsSupporting ML computations
-3. seaborn & matplotlib Used to create powerful HR analytics visualizations: Performance distribution Salary variations Workload patterns Productivity correlations
-4. scikit-learn
+3. seaborn & matplotlib: Used to create powerful HR analytics visualizations: Performance distribution Salary variations Workload patterns Productivity correlations
+4. scikit-learn:
 Used for: Train-test split Data preprocessing pipelines OneHotEncoding categorical variables caling numerical features Logistic Regression & Decision Tree modeling Accuracy, F1-score, and classification report Confusion matrix & ROC Curve
 
 🎯 Project Steps
