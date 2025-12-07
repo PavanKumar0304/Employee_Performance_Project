@@ -1,0 +1,185 @@
+import pandas as pd
+df = pd.read_csv("Extended_Employee_Performance_and_Productivity_Data.csv")
+print(df.columns)
+
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+
+# Load Data
+
+df = pd.read_csv("Extended_Employee_Performance_and_Productivity_Data.csv")
+df.columns = df.columns.str.strip()
+print("Dataset shape:", df.shape)
+print(df.dtypes)
+
+
+# Quick EDA / sanity checks
+
+print("\nMissing values per column:\n", df.isnull().sum())
+print("\nClass distribution for 'Resinged' (if present):\n", df['Resigned'].value_counts() if 'Resigned' in df.columns else "No Resigned column")
+
+
+# Show a concise head
+display(df.head())
+
+
+# create target : High vs Low Performance
+
+# If performance_score is numeric
+if pd.api.types.is_numeric_dtype(df['Performance_Score']):
+    threshold = df['Performance_Score'].median()
+    df['High_Perf'] = (df['Performance_Score'] >=threshold).astype(int)
+    print(f"performance threshold (median): {threshold}")
+else:
+    df['High_Perf'] = df['Performance_Score'].map(lambda x: 1 if x in ['Excellent','High'] else 0)
+
+print("Target distribution:\n",df['High_Perf'].value_counts(normalize=True))
+
+
+# Feature list & basic preprocessing plan
+
+target = 'High_Perf'
+drop_cols = ['Employee_ID', 'Hire_Date', 'Performance_Score']
+x = df.drop(columns=[target] + [c for c in drop_cols if c in df.columns])
+y = df[target]
+
+# Identify numeric and categorical columns
+num_cols = x.select_dtypes(include=['int64','float64']).columns.tolist()
+cat_cols = x.select_dtypes(include=['object','category','bool']).columns.tolist()
+print("Numaric cols:", num_cols)
+print("categorical cols:",cat_cols)
+
+
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+
+# Build preprocessing piplines
+
+num_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler())
+])
+
+cat_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+
+])
+
+preprocessor = ColumnTransformer([
+    ('num',num_pipeline, num_cols),
+    ('cat', cat_pipeline, cat_cols)
+])
+
+
+print(x.shape, y.shape)
+
+
+print("X shape:", x.shape)
+print("Y shape:", y.shape)
+
+
+# Train-test split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y
+)
+
+
+# Model 1 - Logistic Regression
+
+log_reg_model = Pipeline([
+    ("preprocess",preprocessor),
+    ("model", LogisticRegression(max_iter=1000))
+])
+
+log_reg_model.fit(x_train, y_train)
+y_pred_lr = log_reg_model.predict(x_test)
+
+print("Logistic Regression Accuracy:",accuracy_score(y_test, y_pred_lr))
+print(classification_report(y_test, y_pred_lr))
+
+
+# Model 2 - Decision Tree
+
+dt_model = Pipeline([
+    ("preprocess", preprocessor),
+    ("model", DecisionTreeClassifier(max_depth=5, random_state=42))
+])
+
+dt_model.fit(x_train, y_train)
+y_pred_dt = dt_model.predict(x_test)
+
+print("Decisiom Tree Accuracy:", accuracy_score(y_test, y_pred_dt))
+print(classification_report(y_test, y_pred_dt))
+
+
+# Visualizations
+
+plt.figure(figsize=(7,5))
+sns.countplot(x=df["High_Perf"])
+plt.title("High vs Low Performance Distribution")
+plt.show()
+
+plt.figure(figsize=(8,5))
+sns.boxplot(x=df["Department"], y=df["Monthly_Salary"])
+plt.title("Salary by Department")
+plt.xticks(rotation=45)
+plt.show()
+
+plt.figure(figsize=(7,5))
+sns.scatterplot(x=df["Work_Hours_Per_Week"], 
+                y=df["Performance_Score"], 
+                hue=df["Overtime_Hours"], 
+                palette="coolwarm")
+plt.title("Work Hours vs Performance")
+plt.show()
+
+
+# Confusion Matrix
+
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+best_pred = y_pred_dt  
+
+cm = confusion_matrix(y_test, best_pred)
+
+plt.figure(figsize=(6,4))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+
+
+# Distribution of Predictions
+
+sns.countplot(x=y_pred_dt)
+plt.title("Distribution of Predictions")
+plt.xlabel("Predicted Class")
+plt.ylabel("Count")
+plt.show()
+
+
+
+# Actual vs Predicted
+
+comparison = pd.DataFrame({"Actual": y_test, "Predicted": y_pred_dt})
+
+plt.figure(figsize=(7,5))
+sns.countplot(data=comparison)
+plt.title("Actual vs Predicted Comparison")
+plt.show()
